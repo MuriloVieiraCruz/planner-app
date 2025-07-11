@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 import { router, useLocalSearchParams } from "expo-router";
 import { CalendarRange, Info, MapPin, Settings2, Calendar as IconCalendar } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Keyboard, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { Activities } from "./activities";
 import { Details } from "./details";
 import { Modal } from "@/components/modal";
@@ -27,6 +27,7 @@ enum MODAL {
 
 export default function Trip() {
   const [isLoadingTrip, setIsLoadingTrip] = useState(true);
+  const [isUpdatingTrip, setIsUpdatingTrip] = useState(false);
 
   const [tripDetails, setTripDetails] = useState({} as TripData);
   const [option, setOption] = useState<"activity" | "details">("activity");
@@ -69,14 +70,54 @@ export default function Trip() {
   }
 
   function handleSelectDate(selectedDay: DateData) {
-      const dates = calendarUtils.orderStartsAtAndEndsAt({
-        startsAt: selectedDates.startsAt,
-        endsAt: selectedDates.endsAt,
-        selectedDay
-      })
-  
-      setSelectedDates(dates);
+    const dates = calendarUtils.orderStartsAtAndEndsAt({
+      startsAt: selectedDates.startsAt,
+      endsAt: selectedDates.endsAt,
+      selectedDay
+    })
+
+    setSelectedDates(dates);
+  }
+
+  async function handleUpdateTrip() {
+    try {
+
+      if (!tripId) {
+        return
+      }
+
+      if (!destination || !selectedDates.startsAt || !selectedDates.endsAt) {
+        Alert.alert("Atualizar viagem",
+          "Lembre-se de, além de preencher o destino, selecione a data de início e fim da viagem."
+        )
+      }
+
+      setIsUpdatingTrip(true);
+
+      await tripServer.update({
+        id: tripId,
+        destination,
+        starts_at: dayjs(selectedDates.startsAt?.dateString).toString(),
+        ends_at: dayjs(selectedDates.endsAt?.dateString).toString()
+      });
+
+      Alert.alert("Atualizar Viagem",
+        "Viagem atualizada com sucesso!",[
+          {
+            text: "OK",
+            onPress: () => {
+              setShowModal(MODAL.NONE);
+              getTripDetails();
+            },
+          }
+        ]
+      )
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsUpdatingTrip(false);
     }
+  }
 
   useEffect(() => {
     getTripDetails();
@@ -159,12 +200,15 @@ export default function Trip() {
             <IconCalendar color={colors.zinc[400]} size={20} />
             <Input.Field 
               placeholder="Quando?"
-              onChangeText={setDestination}
-              value={destination}
+              value={selectedDates.formatDatesInText}
               onPressIn={() => setShowModal(MODAL.CALENDAR)}
               onFocus={() => Keyboard.dismiss()}
             />
           </Input>
+
+          <Button onPress={handleUpdateTrip} isLoading={isUpdatingTrip}>
+            <Button.Title>Atualizar</Button.Title>
+          </Button>
         </View>
       </Modal>
 
