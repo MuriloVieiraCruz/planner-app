@@ -133,6 +133,8 @@ export default function Index() {
       )
     } catch (error) {
       throw error;
+    } finally {
+      setIsCreatingTrip(false);
     }
   }
 
