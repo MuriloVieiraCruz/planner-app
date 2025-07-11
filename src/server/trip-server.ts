@@ -44,4 +44,23 @@ async function create({
   }
 }
 
-export const tripServer = { create, getById }
+async function update({
+  id,
+  destination,
+  starts_at,
+  ends_at
+}: Omit<TripDetails, "is_confirmed">) {
+  try {
+    const { data } = await api.put<{ tripId: string }>(`/trips/${id}`, {
+      destination,
+      starts_at: new Date(starts_at),
+      ends_at: new Date(ends_at),
+    });
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export const tripServer = { create, update, getById }
